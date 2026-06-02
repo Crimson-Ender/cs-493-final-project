@@ -142,10 +142,45 @@ def user_login():
     r = requests.post(url, json=body, headers=headers)
     return r.text, 200, {'Content-Type':'application/json'}
 
+@app.route('/decode',methods=['GET'])
+def decode_jwt():
+    payload = verify_jwt(request)
+    return payload
+
 #get a summary of all users, only accessible when logged in as an admin user
 @app.route('/'+USERS,methods=['GET'])
 def get_all_users():
-    pass
+
+    try:
+        payload = verify_jwt(request)
+    except AuthError as e:
+        return jsonify(e.error), e.status_code
+    
+    sub = payload['sub']
+
+    #check if the user is an admin
+    query = client.query(kind=USERS)
+    query.add_filter('sub','=',sub)
+    query_results = list(query.fetch())
+
+    if not query_results or query_results[0].get('role') != "admin":
+        return ERR_FORBIDDEN
+    
+    #return summary of all of the users
+    all_users_query = client.query(kind=USERS)
+    all_users_result = list(all_users_query.fetch())
+
+    users = []
+
+    for entity in all_users_result:
+        users.append({
+            'id':entity.key.id,
+            'role':entity.get('role'),
+            'sub':entity.get('sub')
+        })
+    
+    return jsonify(users), 200
+    
 
 #get a user. works either as an admin, with an admin token, or if you have the jwt that matches the user
 @app.route('/'+USERS+ "/<int:id>", methods=["GET"])
