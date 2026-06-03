@@ -202,10 +202,52 @@ def get_user_avatar(id):
 def delete_user_avatar(id):
     pass
 
+"""
+course schema = 
+{
+subject, number, title, term, instructor_id
+}
+
+"""
+
 #create a course, can only be used by an admin user
 @app.route('/'+COURSES, methods=['POST'])
 def create_course():
-    return
+
+    if request.method == 'POST':
+        content = request.get_json()
+
+        #validate inputs
+        if content is None:
+            return ERR_NOT_JSON
+        
+        required_fields = [
+            'subject','number','title','term'
+        ]
+
+        missing_fields = [
+            field for field in required_fields
+            if field not in content or content[field] in [None,'']
+        ]
+
+        if missing_fields:
+            return ERR_MISSING_ATTRS
+        
+        payload = verify_jwt(request)
+        sub = payload['sub']
+
+        #check if the user is an admin
+        query = client.query(kind=USERS)
+        query.add_filter('sub','=',sub)
+        query_results = list(query.fetch())
+
+        if not query_results or query_results[0].get('role') != "admin":
+            return ERR_FORBIDDEN
+        
+    else:
+        return jsonify(error="Method not recognized")
+        
+
 
 #get a list of all courses, unprotected
 #requires pagination, page size of 3 entries
