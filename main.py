@@ -38,9 +38,10 @@ ERR_BAD_INSTRUCTOR_ID = ({"Error": "The value of instructor_id is invalid"},409)
 ERR_UNAUTHORIZED = ({"Error": "Unauthorized"}, 401)
 ERR_USER_NOT_FOUND=({"Error":"No user with this id exists"},404)
 ERR_MISSING_FILE = ({"Error":"The request body is missing the file key"},400)
+ERR_NOT_FOUND = ({"Error":"Not found"},404)
 
 oauth = OAuth(app)
-
+  
 #authorize users, set up Auth0 integration
 
 auth0 = oauth.register(
@@ -182,7 +183,7 @@ def get_all_users():
     try:
         payload = verify_jwt(request)
     except AuthError as e:
-        return jsonify(e.error), e.status_code
+        return ERR_UNAUTHORIZED
     
     sub = payload['sub']
 
@@ -216,7 +217,7 @@ def get_user(id):
     try:
         payload = verify_jwt(request)
     except AuthError as e:
-        return jsonify(e.error), e.status_code
+        return ERR_UNAUTHORIZED
 
     sub = payload['sub']
 
@@ -281,7 +282,7 @@ def post_user_avatar(id):
         payload = verify_jwt(request)
     except AuthError as e:
         print("auth error:", e.error)
-        return jsonify(e.error), e.status_code
+        return ERR_UNAUTHORIZED
     
     print("jwt verified")
     sub = payload['sub']
@@ -325,7 +326,7 @@ def get_user_avatar(id):
     try:
         payload = verify_jwt(request)
     except AuthError as e:
-        return jsonify(e.error), e.status_code
+        return ERR_UNAUTHORIZED
     
     sub = payload['sub']
 
@@ -361,7 +362,7 @@ def delete_user_avatar(id):
     if user is None or user.get('sub') != sub:
         return ERR_FORBIDDEN
     if not user.get('avatar_filename'):
-        return jsonify({"Error":"No avatar found"}),404
+        return ERR_NOT_FOUND
     
     storage_client = storage.Client()
     bucket = storage_client.bucket(BUCKET_NAME)
@@ -404,13 +405,13 @@ def create_course():
         ]
 
         if missing_fields:
-            return ERR_MISSING_ATTRS
+            return jsonify({"Error": "The request body is invalid"}), 400
         
         #check if jwt is valid:
         try:
             payload = verify_jwt(request)
         except AuthError as e:
-            return jsonify(e.error), e.status_code
+            return ERR_UNAUTHORIZED
          
         sub = payload['sub']
 
@@ -490,7 +491,7 @@ def get_single_course(id):
 
         #check if the course is existent
         if course is None:
-           return jsonify({"Error":"No course with this course_id exists"}),404
+           return ERR_NOT_FOUND
         else:
             #if the course is properly retrieved, return it
 
@@ -506,7 +507,7 @@ def update_course_data(id):
     try:
         payload = verify_jwt(request)
     except AuthError as e:
-        return jsonify(e.error), e.status_code  # 401, not 403
+        return ERR_UNAUTHORIZED
 
     sub = payload['sub']
     course_key = client.key(COURSES, id)
@@ -550,7 +551,7 @@ def delete_course(id):
     try:
         payload = verify_jwt(request)
     except AuthError as e:
-        return jsonify(e.error), e.status_code  # 401, not 403
+        return ERR_UNAUTHORIZED
 
     sub = payload['sub']
     course_key = client.key(COURSES, id)
@@ -574,7 +575,7 @@ def update_course_enrollment(id):
     try:
         payload = verify_jwt(request)
     except AuthError as e:
-        return jsonify(e.error), e.status_code  # 401, not 403
+        return ERR_UNAUTHORIZED  # 401, not 403
 
     sub = payload['sub']
     course_key = client.key(COURSES, id)

@@ -1,5 +1,6 @@
 Flask==3.1.0
 google-cloud-datastore==2.20.1
+google-cloud-storage
 python-jose
 six
 requests
